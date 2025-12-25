@@ -1,0 +1,94 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { mockProducts } from '@/lib/data/mock-products'
+
+// Mock AI responses (since we don't have real OpenAI API key)
+// In production, you would use OpenAI API
+
+export async function POST(request: NextRequest) {
+  try {
+    const { message, conversationHistory } = await request.json()
+
+    // Simulate AI processing delay
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Simple keyword-based responses
+    const messageLower = message.toLowerCase()
+
+    let response = ''
+    let suggestedProducts = []
+
+    // Laptop queries
+    if (messageLower.includes('laptop') || messageLower.includes('máy tính')) {
+      response = 'Chúng tôi có nhiều laptop cao cấp. Bạn muốn tìm laptop cho công việc gì? Gaming, văn phòng, hay đồ họa?'
+      suggestedProducts = mockProducts.filter(p => p.categoryId === '1').slice(0, 3)
+    }
+    // Gaming queries
+    else if (messageLower.includes('gaming') || messageLower.includes('chơi game')) {
+      response = 'Tôi gợi ý ASUS ROG Zephyrus G14 - laptop gaming mỏng nhẹ với hiệu năng mạnh mẽ, hoặc Dell XPS 15 nếu bạn muốn cân bằng gaming và công việc.'
+      suggestedProducts = mockProducts.filter(p =>
+        p.slug === 'asus-rog-zephyrus-g14' || p.slug === 'dell-xps-15-9530'
+      )
+    }
+    // Phone queries
+    else if (messageLower.includes('điện thoại') || messageLower.includes('phone') || messageLower.includes('smartphone')) {
+      response = 'Chúng tôi có iPhone 15 Pro Max và Samsung Galaxy S24 Ultra - 2 flagship hàng đầu. Bạn thích hệ sinh thái nào?'
+      suggestedProducts = mockProducts.filter(p => p.categoryId === '2')
+    }
+    // Apple queries
+    else if (messageLower.includes('apple') || messageLower.includes('iphone') || messageLower.includes('macbook') || messageLower.includes('ipad')) {
+      response = 'Apple có nhiều sản phẩm tuyệt vời! Từ MacBook Pro M3 Max, iPhone 15 Pro Max, đến iPad Pro M2. Bạn quan tâm sản phẩm nào?'
+      suggestedProducts = mockProducts.filter(p => p.brand === 'Apple').slice(0, 4)
+    }
+    // Price queries
+    else if (messageLower.includes('giá') || messageLower.includes('bao nhiêu') || messageLower.includes('price')) {
+      response = 'Chúng tôi có sản phẩm từ 2 triệu (phụ kiện) đến 80 triệu (laptop cao cấp). Bạn có ngân sách bao nhiêu?'
+    }
+    // Budget queries
+    else if (messageLower.match(/(\d+)\s*(triệu|tr|million)/)) {
+      const budget = parseInt(messageLower.match(/(\d+)/)?.[1] || '0') * 1000000
+      response = `Với ngân sách khoảng ${budget / 1000000} triệu, tôi gợi ý:`
+      suggestedProducts = mockProducts.filter(p => {
+        const price = p.salePrice || p.price
+        return price <= budget * 1.2 && price >= budget * 0.5
+      }).slice(0, 3)
+    }
+    // Accessories queries
+    else if (messageLower.includes('tai nghe') || messageLower.includes('chuột') || messageLower.includes('phụ kiện') || messageLower.includes('airpods')) {
+      response = 'Chúng tôi có AirPods Pro 2 và chuột Logitech MX Master 3S - những phụ kiện cao cấp nhất.'
+      suggestedProducts = mockProducts.filter(p => p.categoryId === '4')
+    }
+    // Recommendations
+    else if (messageLower.includes('gợi ý') || messageLower.includes('recommend') || messageLower.includes('tư vấn')) {
+      response = 'Dựa trên sở thích của nhiều khách hàng, tôi gợi ý những sản phẩm hot nhất:'
+      suggestedProducts = mockProducts.filter(p => p.featured).slice(0, 4)
+    }
+    // Greetings
+    else if (messageLower.includes('xin chào') || messageLower.includes('hello') || messageLower.includes('hi ')) {
+      response = 'Xin chào! Tôi là trợ lý AI của SHOP QM. Tôi có thể giúp bạn tìm sản phẩm công nghệ phù hợp. Bạn đang tìm kiếm gì?'
+    }
+    // Thanks
+    else if (messageLower.includes('cảm ơn') || messageLower.includes('thanks') || messageLower.includes('thank you')) {
+      response = 'Rất vui được hỗ trợ bạn! Nếu có thắc mắc gì, đừng ngần ngại hỏi nhé! 😊'
+    }
+    // Help
+    else if (messageLower.includes('giúp') || messageLower.includes('help')) {
+      response = 'Tôi có thể giúp bạn:\n\n• Tìm sản phẩm theo nhu cầu\n• So sánh sản phẩm\n• Gợi ý sản phẩm phù hợp với ngân sách\n• Trả lời thông tin sản phẩm\n\nBạn cần gì?'
+    }
+    // Default
+    else {
+      response = 'Tôi hiểu bạn đang tìm kiếm thông tin. Bạn có thể hỏi tôi về laptop, điện thoại, tablet, hoặc phụ kiện. Hoặc cho tôi biết ngân sách và nhu cầu của bạn!'
+      suggestedProducts = mockProducts.filter(p => p.featured).slice(0, 3)
+    }
+
+    return NextResponse.json({
+      message: response,
+      products: suggestedProducts,
+    })
+  } catch (error) {
+    console.error('Error in AI chat:', error)
+    return NextResponse.json(
+      { error: 'Failed to process chat message' },
+      { status: 500 }
+    )
+  }
+}

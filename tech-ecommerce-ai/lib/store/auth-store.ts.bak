@@ -1,0 +1,77 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  role: 'user' | 'admin'
+}
+
+interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  logout: () => void
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+
+      login: async (email: string, password: string) => {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Mock users database
+        const mockUsers = [
+          { id: '1', email: 'admin@shopqm.vn', password: 'admin123', name: 'Admin', role: 'admin' as const },
+          { id: '2', email: 'user@example.com', password: '123456', name: 'User Demo', role: 'user' as const },
+        ]
+
+        const user = mockUsers.find(u => u.email === email && u.password === password)
+
+        if (user) {
+          const { password: _, ...userWithoutPassword } = user
+          set({ user: userWithoutPassword, isAuthenticated: true })
+          return { success: true }
+        }
+
+        return { success: false, error: 'Email hoặc mật khẩu không đúng!' }
+      },
+
+      register: async (name: string, email: string, password: string) => {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Check if email already exists (in real app, check database)
+        const existingUsers = ['admin@shopqm.vn', 'user@example.com']
+
+        if (existingUsers.includes(email)) {
+          return { success: false, error: 'Email đã được sử dụng!' }
+        }
+
+        // Create new user
+        const newUser: User = {
+          id: String(Date.now()),
+          email,
+          name,
+          role: 'user'
+        }
+
+        set({ user: newUser, isAuthenticated: true })
+        return { success: true }
+      },
+
+      logout: () => {
+        set({ user: null, isAuthenticated: false })
+      },
+    }),
+    {
+      name: 'auth-storage',
+    }
+  )
+)

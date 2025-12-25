@@ -1,0 +1,1 @@
+UPDATE users SET password = '$2a$10$5NRio1hZH1JrB/pzf1Jqr.16CF8gZwscAk9JujPXs1f0MTBglzYAu' WHERE role = 'CUSTOMER';

@@ -1,0 +1,324 @@
+// Prisma Schema cho SHOP QM E-commerce
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(CUSTOMER)
+  image         String?
+  emailVerified DateTime?
+  banned        Boolean   @default(false)
+
+  // Profile Information
+  phone         String?
+  address       String?   @db.Text
+
+  // Relations
+  orders        Order[]
+  reviews       Review[]
+  notifications Notification[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  STAFF
+}
+
+// Category Model
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+
+  products    Product[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// Product Model
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @db.Text
+  price       Float
+  salePrice   Float?
+
+  // Product Details
+  brand       String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // Specs (stored as JSON string)
+  specs       Json?
+
+  // Images (stored as comma-separated URLs or JSON string)
+  images      String?  @db.Text
+  thumbnail   String
+
+  // Inventory
+  stock       Int      @default(0)
+  sku         String   @unique
+
+  // Stats
+  sold        Int      @default(0)
+  views       Int      @default(0)
+  rating      Float    @default(0)
+  reviews     Int      @default(0)
+
+  // Features
+  featured    Boolean  @default(false)
+  hot         Boolean  @default(false)
+
+  // Relations
+  promotionEmails PromotionEmail[]
+  productReviews  Review[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([featured])
+  @@index([hot])
+  @@index([brand])
+  @@map("products")
+}
+
+// Order Model
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Customer info
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  shippingAddress String      @db.Text
+
+  // Order details
+  items           OrderItem[]
+  totalAmount     Float
+  discount        Float          @default(0) // Discount amount applied
+  shippingFee     Float          @default(0)
+  paymentMethod   String
+  paymentStatus   PaymentStatus  @default(PENDING)
+  status          OrderStatus    @default(PENDING)
+
+  // Voucher
+  voucherId       String?
+  voucher         Voucher?       @relation(fields: [voucherId], references: [id], onDelete: SetNull)
+  voucherCode     String?        // Store code for reference
+
+  // Customer notes
+  notes           String?        @db.Text
+
+  // Notifications
+  notifications   Notification[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([orderNumber])
+  @@index([voucherId])
+  @@map("orders")
+}
+
+// OrderItem Model
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId   String
+  productName String
+  price       Float
+  quantity    Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// Order Status Enum
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPING
+  COMPLETED
+  REFUNDING
+  CANCELLED
+}
+
+// Payment Status Enum
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// Promotion Email History
+model PromotionEmail {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  discountPercent Int
+  validUntil      DateTime?
+
+  sentTo          Int      @default(0) // Number of emails sent
+  successCount    Int      @default(0) // Number of successful sends
+  failCount       Int      @default(0) // Number of failed sends
+
+  sentBy          String   // Admin user ID who sent the email
+  sentAt          DateTime @default(now())
+
+  @@index([productId])
+  @@index([sentAt])
+  @@map("promotion_emails")
+}
+
+// Review Model
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Review Content
+  rating    Int      // 1-5 stars
+  comment   String   @db.Text
+  images    String?  @db.Text // JSON array of image URLs
+
+  // Metadata
+  helpful   Int      @default(0) // Number of helpful votes
+  verified  Boolean  @default(false) // User purchased this product
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+// Voucher Model
+model Voucher {
+  id             String         @id @default(cuid())
+  code           String         @unique
+  description    String?        @db.Text
+
+  // Discount Configuration
+  discountType   DiscountType
+  discountValue  Float          // Percentage (10 = 10%) or Fixed Amount (50000 = 50,000đ)
+
+  // Usage Restrictions
+  minOrderValue  Float?         // Minimum order value required
+  maxDiscount    Float?         // Maximum discount for percentage vouchers
+  usageLimit     Int?           // Total usage limit (null = unlimited)
+  usedCount      Int            @default(0)
+
+  // Validity Period
+  validFrom      DateTime
+  validUntil     DateTime
+
+  // Status
+  active         Boolean        @default(true)
+
+  // Relations
+  orders         Order[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([code])
+  @@index([active])
+  @@index([validFrom])
+  @@index([validUntil])
+  @@map("vouchers")
+}
+
+// Discount Type Enum
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+// Notification Model
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  message     String   @db.Text
+  type        NotificationType @default(INFO)
+  read        Boolean  @default(false)
+
+  // Optional references
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  ORDER
+  VOUCHER
+}
+
+// Password Reset Model
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("password_resets")
+}

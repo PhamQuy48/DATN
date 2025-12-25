@@ -1,0 +1,19 @@
+{
+  "name": "SHOP QM - Cửa hàng công nghệ",
+  "short_name": "SHOP QM",
+  "description": "E-commerce website with AI Integration - Mua sắm thiết bị công nghệ thông minh",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#DC2626",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "technology"]
+}

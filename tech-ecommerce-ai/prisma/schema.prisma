@@ -78,7 +78,7 @@ model Product {
 
   // Images (stored as comma-separated URLs or JSON string)
   images      String?  @db.Text
-  thumbnail   String
+  thumbnail   String   @db.Text
 
   // Inventory
   stock       Int      @default(0)

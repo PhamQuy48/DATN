@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { checkAuth } from '@/lib/auth/check-auth'
+import { notifyUser } from '@/lib/notifications/sse'
 
 // GET /api/orders/[id] - Get a specific order
 export async function GET(
@@ -231,7 +232,7 @@ export async function PATCH(
 
       const notificationData = statusMessages[newStatus]
       if (notificationData) {
-        await prisma.notification.create({
+        const notification = await prisma.notification.create({
           data: {
             userId: order.userId,
             title: notificationData.title,
@@ -239,7 +240,23 @@ export async function PATCH(
             type: notificationData.type,
             orderId: order.id,
             read: false
+          },
+          include: {
+            order: {
+              select: {
+                id: true,
+                orderNumber: true,
+                totalAmount: true,
+                status: true
+              }
+            }
           }
+        })
+
+        // Send real-time notification via SSE
+        notifyUser(order.userId, {
+          ...notification,
+          createdAt: notification.createdAt.toISOString()
         })
       }
     }

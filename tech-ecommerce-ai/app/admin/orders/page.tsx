@@ -13,6 +13,7 @@ import {
   Eye,
   Edit,
   DollarSign,
+  RefreshCw,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -55,25 +56,47 @@ export default function AdminOrdersPage() {
   const [showDetailModal, setShowDetailModal] = useState(false)
 
   // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/orders', {
+        cache: 'no-store' // Disable cache for fresh data
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setOrders(data.orders || [])
+      } else {
+        toast.error('Không thể tải danh sách đơn hàng')
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      toast.error('Có lỗi xảy ra khi tải đơn hàng')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initial fetch + Auto-refresh every 30 seconds
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch('/api/orders')
-        if (response.ok) {
-          const data = await response.json()
-          setOrders(data.orders || [])
-        } else {
-          toast.error('Không thể tải danh sách đơn hàng')
-        }
-      } catch (error) {
-        console.error('Error fetching orders:', error)
-        toast.error('Có lỗi xảy ra khi tải đơn hàng')
-      } finally {
-        setLoading(false)
+    fetchOrders()
+
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchOrders()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Refresh when page becomes visible (user switches back to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchOrders()
       }
     }
 
-    fetchOrders()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   // Filter orders
@@ -109,6 +132,9 @@ export default function AdminOrdersPage() {
         order.id === orderId ? { ...order, ...updatedOrder } : order
       ))
       toast.success(`Đã cập nhật trạng thái đơn hàng!`)
+
+      // Re-fetch to ensure data is in sync
+      fetchOrders()
     } catch (error) {
       console.error('Error updating order status:', error)
       toast.error('Có lỗi xảy ra khi cập nhật trạng thái')
@@ -176,9 +202,22 @@ export default function AdminOrdersPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Quản lý đơn hàng</h1>
-        <p className="text-gray-600 mt-1">Theo dõi và xử lý các đơn hàng</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Quản lý đơn hàng</h1>
+          <p className="text-gray-600 mt-1">Theo dõi và xử lý các đơn hàng</p>
+        </div>
+        <button
+          onClick={() => {
+            setLoading(true)
+            fetchOrders()
+            toast.success('Đã làm mới danh sách đơn hàng')
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Làm mới
+        </button>
       </div>
 
       {/* Filters & Search */}

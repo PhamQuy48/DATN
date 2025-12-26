@@ -10,6 +10,7 @@ import { useCartStore } from '@/lib/store/cart-store'
 import { formatPrice } from '@/lib/utils/format'
 import { ShoppingBag, Tag, CheckCircle, X, Loader, Edit2, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isValidImageUrl } from '@/lib/utils/image-validator'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -468,15 +469,22 @@ export default function CheckoutPage() {
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {selectedItems.map((item) => {
                     const price = item.product.salePrice || item.product.price
+                    const hasValidThumbnail = isValidImageUrl(item.product.thumbnail)
                     return (
                       <div key={item.product.id} className="flex gap-3">
                         <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          <Image
-                            src={item.product.thumbnail}
-                            alt={item.product.name}
-                            fill
-                            className="object-cover"
-                          />
+                          {hasValidThumbnail ? (
+                            <Image
+                              src={item.product.thumbnail}
+                              alt={item.product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                              <div className="text-2xl">📦</div>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 line-clamp-2">

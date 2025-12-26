@@ -89,11 +89,6 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
           <p>&copy; 2025 SHOP QM. Tất cả quyền được bảo lưu.</p>
-          <p className="mt-2">
-            Được xây dựng với{' '}
-            <span className="text-red-500">❤️</span> và{' '}
-            <span className="text-primary-400">Next.js + AI</span>
-          </p>
         </div>
       </div>
     </footer>

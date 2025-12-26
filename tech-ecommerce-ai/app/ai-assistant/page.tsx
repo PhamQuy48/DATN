@@ -200,12 +200,18 @@ export default function AIAssistantPage() {
                           <div className="flex gap-4">
                             {/* Product Image */}
                             <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
-                              <Image
-                                src={product.images[0] || '/placeholder.png'}
-                                alt={product.name}
-                                fill
-                                className="object-cover"
-                              />
+                              {product.images?.[0] && product.images[0].trim() !== '' && (product.images[0].startsWith('http') || product.images[0].startsWith('/')) ? (
+                                <Image
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                  <span className="text-3xl">📦</span>
+                                </div>
+                              )}
                               {product.discount > 0 && (
                                 <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                                   -{product.discount}%

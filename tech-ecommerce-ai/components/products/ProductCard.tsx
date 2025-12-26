@@ -54,17 +54,33 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? calculateDiscount(product.price, product.salePrice!)
     : 0
 
+  // Validate thumbnail URL - thumbnails are now always plain strings
+  const thumbnailUrl = product.thumbnail || ''
+  const hasValidThumbnail = thumbnailUrl &&
+    thumbnailUrl.trim() !== '' &&
+    (thumbnailUrl.startsWith('http://') || thumbnailUrl.startsWith('https://'))
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 group overflow-hidden hover:shadow-xl hover:border-blue-200 transition-all duration-300">
       {/* Image Container */}
       <Link href={`/products/${product.slug}`} className="relative block aspect-square overflow-hidden bg-gray-50">
-        <Image
-          src={product.thumbnail || '/images/placeholder.png'}
-          alt={product.name}
-          fill
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        />
+        {hasValidThumbnail ? (
+          <Image
+            src={thumbnailUrl}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <div className="text-center">
+              <div className="text-6xl mb-2">📦</div>
+              <p className="text-sm text-gray-500 font-medium">No Image</p>
+            </div>
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">

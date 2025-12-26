@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatPrice } from '@/lib/utils/format'
+import { isValidImageUrl } from '@/lib/utils/image-validator'
 import type { Product } from '@prisma/client'
 import {
   Plus,
@@ -60,7 +61,8 @@ export default function AdminProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/products')
+      // Admin page needs all products - set high limit
+      const response = await fetch('/api/products?limit=1000')
       const data = await response.json()
       setProducts(data.products || [])
     } catch (error) {
@@ -95,24 +97,42 @@ export default function AdminProductsPage() {
     }
 
     try {
+      console.log('🗑️ Deleting product:', name, id)
       const response = await fetch(`/api/products/${id}`, {
         method: 'DELETE',
       })
 
+      const data = await response.json()
+      console.log('🗑️ Delete response:', data)
+
       if (!response.ok) {
-        throw new Error('Failed to delete product')
+        // Show detailed error message from API
+        const errorMessage = data.details || data.error || 'Failed to delete product'
+        throw new Error(errorMessage)
       }
 
       setProducts(products.filter(p => p.id !== id))
-      toast.success('Đã xóa sản phẩm thành công!')
+      toast.success(`Đã xóa sản phẩm "${name}" thành công!`)
+      console.log('✅ Product deleted successfully')
     } catch (error) {
-      console.error('Error deleting product:', error)
-      toast.error('Không thể xóa sản phẩm!')
+      console.error('❌ Error deleting product:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa sản phẩm!'
+      toast.error(`Lỗi: ${errorMessage}`)
     }
   }
 
   const handleEdit = (product: Product) => {
-    setEditingProduct({ ...product })
+    // Convert images from comma-separated string to array for editing
+    let imagesArray: string[] | null = null
+    if (product.images && typeof product.images === 'string') {
+      const imagesList = product.images.split(',').map(img => img.trim()).filter(img => img)
+      imagesArray = imagesList.length > 0 ? imagesList : null
+    }
+
+    setEditingProduct({
+      ...product,
+      images: imagesArray as any  // Convert to array for ImageUpload component
+    })
     setIsModalOpen(true)
   }
 
@@ -167,10 +187,11 @@ export default function AdminProductsPage() {
       return
     }
 
-    if (!newProduct.images || newProduct.images.length === 0) {
-      toast.error('Vui lòng thêm ít nhất 1 hình ảnh sản phẩm!')
-      return
-    }
+    // Images là optional - nếu không có sẽ dùng placeholder
+    // if (!newProduct.images || newProduct.images.length === 0) {
+    //   toast.error('Vui lòng thêm ít nhất 1 hình ảnh sản phẩm!')
+    //   return
+    // }
 
     try {
       const productData = {
@@ -184,10 +205,12 @@ export default function AdminProductsPage() {
         stock: newProduct.stock || 0,
         rating: newProduct.rating || 5,
         reviews: newProduct.reviews || 0,
-        images: newProduct.images,
+        images: newProduct.images || null,  // Allow null - backend will use placeholder
         featured: newProduct.featured || false,
         hot: newProduct.hot || false,
       }
+
+      console.log('📤 Creating product with data:', productData)
 
       const response = await fetch('/api/products', {
         method: 'POST',
@@ -197,11 +220,14 @@ export default function AdminProductsPage() {
         body: JSON.stringify(productData),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to create product')
-      }
-
       const data = await response.json()
+      console.log('📥 API Response:', { status: response.status, data })
+
+      if (!response.ok) {
+        // Show detailed error message from API
+        const errorMessage = data.error || data.details || 'Failed to create product'
+        throw new Error(errorMessage)
+      }
 
       setProducts([data.product, ...products])
       toast.success('Đã thêm sản phẩm mới thành công!')
@@ -220,8 +246,9 @@ export default function AdminProductsPage() {
         hot: false,
       })
     } catch (error) {
-      console.error('Error creating product:', error)
-      toast.error('Không thể thêm sản phẩm!')
+      console.error('❌ Error creating product:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Không thể thêm sản phẩm!'
+      toast.error(`Lỗi: ${errorMessage}`)
     }
   }
 
@@ -342,17 +369,39 @@ export default function AdminProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => (
+                filteredProducts.map((product) => {
+                  // Get product image URL
+                  let imageUrl = ''
+                  try {
+                    if (product.images) {
+                      const imagesArray = typeof product.images === 'string' ? JSON.parse(product.images) : product.images
+                      imageUrl = Array.isArray(imagesArray) && imagesArray.length > 0 ? imagesArray[0] : ''
+                    }
+                    if (!imageUrl) {
+                      imageUrl = product.thumbnail || ''
+                    }
+                  } catch (e) {
+                    imageUrl = product.thumbnail || ''
+                  }
+                  const hasValidImage = isValidImageUrl(imageUrl)
+
+                  return (
                   <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          <Image
-                            src={product.images ? (typeof product.images === 'string' ? JSON.parse(product.images)[0] : product.images[0]) : product.thumbnail}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                          />
+                          {hasValidImage ? (
+                            <Image
+                              src={imageUrl}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                              <div className="text-lg">📦</div>
+                            </div>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 truncate">{product.name}</p>
@@ -437,7 +486,8 @@ export default function AdminProductsPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -638,8 +688,8 @@ export default function AdminProductsPage() {
 
               {/* Image Upload */}
               <ImageUpload
-                images={newProduct.images ? (typeof newProduct.images === 'string' ? JSON.parse(newProduct.images) : newProduct.images) : []}
-                onImagesChange={(images) => setNewProduct({ ...newProduct, images: JSON.stringify(images) })}
+                images={newProduct.images ? (Array.isArray(newProduct.images) ? newProduct.images : []) : []}
+                onImagesChange={(images) => setNewProduct({ ...newProduct, images: images.length > 0 ? images : null })}
                 maxImages={5}
               />
             </div>
@@ -835,8 +885,8 @@ export default function AdminProductsPage() {
 
               {/* Image Upload */}
               <ImageUpload
-                images={editingProduct.images ? (typeof editingProduct.images === 'string' ? JSON.parse(editingProduct.images) : editingProduct.images) : []}
-                onImagesChange={(images) => setEditingProduct({ ...editingProduct, images: JSON.stringify(images) })}
+                images={editingProduct.images ? (Array.isArray(editingProduct.images) ? editingProduct.images : []) : []}
+                onImagesChange={(images) => setEditingProduct({ ...editingProduct, images: images.length > 0 ? images : null })}
                 maxImages={5}
               />
             </div>

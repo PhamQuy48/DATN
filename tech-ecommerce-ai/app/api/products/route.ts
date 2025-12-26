@@ -3,7 +3,9 @@ import { prisma } from '@/lib/db/prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📥 [Create Product] Request received')
     const body = await request.json()
+    console.log('📦 [Create Product] Body:', body)
 
     const {
       name,
@@ -21,29 +23,74 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !brand || !price || !categoryId) {
+      console.log('❌ [Create Product] Missing required fields')
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        {
+          error: 'Thiếu thông tin bắt buộc',
+          details: 'Cần có: tên sản phẩm, thương hiệu, giá, danh mục'
+        },
         { status: 400 }
       )
     }
+
+    // Validate images - must be HTTP/HTTPS URLs only (no local paths allowed)
+    // Filter out null/empty values first
+    let validImages = null
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images]
+      // Filter out null, undefined, empty strings
+      const filteredImages = imageArray.filter(img => img && typeof img === 'string' && img.trim() !== '')
+
+      // Only validate if we have images after filtering
+      if (filteredImages.length > 0) {
+        // Validate each image URL
+        for (const img of filteredImages) {
+          if (!img.startsWith('http://') && !img.startsWith('https://')) {
+            console.log('❌ [Create Product] Invalid image URL:', img)
+            return NextResponse.json(
+              {
+                error: 'URL hình ảnh không hợp lệ',
+                details: 'Chỉ chấp nhận URL HTTP/HTTPS. Vui lòng upload ảnh qua upload API trước.',
+                invalidUrl: img
+              },
+              { status: 400 }
+            )
+          }
+        }
+        validImages = filteredImages
+      }
+    }
+
+    // If no valid images, use a default placeholder
+    const imageData = validImages && validImages.length > 0
+      ? validImages.join(',')
+      : 'https://via.placeholder.com/400x300?text=No+Image'
+
+    const thumbnailData = validImages && validImages.length > 0
+      ? validImages[0]
+      : 'https://via.placeholder.com/400x300?text=No+Image'
+
+    console.log('📸 [Create Product] Images:', { original: images, valid: validImages, final: imageData })
+
+    console.log('💾 [Create Product] Creating in database...')
 
     // Create product in database
     const product = await prisma.product.create({
       data: {
         name,
-        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+        slug: slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         brand,
-        price,
-        salePrice,
+        price: parseFloat(price),
+        salePrice: salePrice ? parseFloat(salePrice) : null,
         description: description || '',
         categoryId,
-        stock: stock || 0,
-        rating: rating || 5,
-        reviews: reviews || 0,
+        stock: parseInt(stock) || 0,
+        rating: parseFloat(rating) || 5,
+        reviews: parseInt(reviews) || 0,
         sold: 0,
         views: 0,
-        images: Array.isArray(images) ? images.join(',') : images,
-        thumbnail: Array.isArray(images) ? images[0] : images,
+        images: imageData,
+        thumbnail: thumbnailData,
         sku: `PROD-${Date.now()}`,
         specs: '{}',
         featured: false,
@@ -59,11 +106,18 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('✅ [Create Product] Success:', product.id, product.name)
+
     return NextResponse.json({ product }, { status: 201 })
   } catch (error) {
-    console.error('Error creating product:', error)
+    console.error('❌ [Create Product] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
     return NextResponse.json(
-      { error: 'Failed to create product' },
+      {
+        error: 'Không thể tạo sản phẩm',
+        details: errorMessage
+      },
       { status: 500 }
     )
   }

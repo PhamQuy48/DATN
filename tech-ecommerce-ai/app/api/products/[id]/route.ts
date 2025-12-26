@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/db/prisma'
 
 // GET /api/products/[id] - Get product by ID
@@ -127,6 +128,30 @@ export async function PUT(
       }
     }
 
+    // Validate images if provided - must be HTTP/HTTPS URLs only (no local paths allowed)
+    if (images !== undefined && images !== null) {
+      const imageArray = Array.isArray(images) ? images : [images]
+      // Filter out null/empty values first
+      const filteredImages = imageArray.filter(img => img && typeof img === 'string' && img.trim() !== '')
+
+      // Only validate if we have images after filtering
+      if (filteredImages.length > 0) {
+        for (const img of filteredImages) {
+          if (!img.startsWith('http://') && !img.startsWith('https://')) {
+            console.log('❌ [Update Product] Invalid image URL:', img)
+            return NextResponse.json(
+              {
+                error: 'URL hình ảnh không hợp lệ',
+                details: 'Chỉ chấp nhận URL HTTP/HTTPS. Vui lòng upload ảnh qua upload API trước.',
+                invalidUrl: img
+              },
+              { status: 400 }
+            )
+          }
+        }
+      }
+    }
+
     // Prepare update data
     const updateData: any = {}
     if (name) updateData.name = name
@@ -138,13 +163,31 @@ export async function PUT(
     if (categoryId) updateData.categoryId = categoryId
     if (specs !== undefined) updateData.specs = specs
     if (images !== undefined) {
-      updateData.images = Array.isArray(images) ? images.join(',') : images
-      // Update thumbnail to first image
-      if (Array.isArray(images) && images.length > 0) {
-        updateData.thumbnail = images[0]
+      if (images === null) {
+        // If images is explicitly null, use placeholder
+        updateData.images = 'https://via.placeholder.com/400x300?text=No+Image'
+        updateData.thumbnail = 'https://via.placeholder.com/400x300?text=No+Image'
+      } else if (Array.isArray(images)) {
+        // Filter out null/empty values
+        const filteredImages = images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+        if (filteredImages.length > 0) {
+          updateData.images = filteredImages.join(',')
+          updateData.thumbnail = filteredImages[0]
+        } else {
+          // Empty array - use placeholder
+          updateData.images = 'https://via.placeholder.com/400x300?text=No+Image'
+          updateData.thumbnail = 'https://via.placeholder.com/400x300?text=No+Image'
+        }
+      } else {
+        // Single image string
+        updateData.images = images
+        updateData.thumbnail = images
       }
     }
-    if (thumbnail) updateData.thumbnail = thumbnail
+    // Only set thumbnail if it's a valid string (not array)
+    if (thumbnail && typeof thumbnail === 'string' && !thumbnail.startsWith('[')) {
+      updateData.thumbnail = thumbnail
+    }
     if (stock !== undefined) updateData.stock = parseInt(stock)
     if (sku) updateData.sku = sku
     if (typeof featured === 'boolean') updateData.featured = featured
@@ -184,27 +227,76 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🗑️ [Delete Product] Request received')
     const { id } = await params
+    console.log('🗑️ [Delete Product] Product ID:', id)
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id },
+      include: {
+        productReviews: true,
+        promotionEmails: true,
+      }
     })
 
     if (!existingProduct) {
+      console.log('❌ [Delete Product] Product not found:', id)
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    // Delete product
+    console.log('📦 [Delete Product] Product found:', existingProduct.name)
+    console.log('🔗 [Delete Product] Reviews count:', existingProduct.productReviews.length)
+    console.log('🔗 [Delete Product] Promotion emails count:', existingProduct.promotionEmails.length)
+
+    // Note: Reviews and PromotionEmails have onDelete: Cascade,
+    // so they will be automatically deleted when product is deleted
+
+    // Delete product (cascade will handle related records)
+    console.log('🗑️ [Delete Product] Deleting product (cascade will delete related records)...')
     await prisma.product.delete({
       where: { id },
     })
 
-    return NextResponse.json({ message: 'Product deleted successfully' })
+    console.log('✅ [Delete Product] Product deleted successfully:', existingProduct.name)
+
+    // CRITICAL: Force complete cache purge
+    console.log('🔄 [Delete Product] Purging ALL product caches...')
+
+    // Revalidate by tags (if using fetch with tags)
+    revalidateTag('products')
+    revalidateTag('product-list')
+    revalidateTag(`product-${id}`)
+
+    // Revalidate all pages that display products
+    revalidatePath('/', 'layout')  // Homepage + all nested pages
+    revalidatePath('/products', 'page')  // Products list page only
+    revalidatePath('/products', 'layout')  // Products layout + all nested
+    revalidatePath(`/products/${existingProduct.slug}`, 'page')  // Product detail
+    revalidatePath('/admin/products', 'page')  // Admin products page
+
+    console.log('✅ [Delete Product] All caches purged and pages revalidated')
+
+    return NextResponse.json({
+      message: 'Product deleted successfully',
+      deletedProduct: {
+        id: existingProduct.id,
+        name: existingProduct.name,
+        slug: existingProduct.slug
+      }
+    })
   } catch (error) {
-    console.error('Error deleting product:', error)
+    console.error('❌ [Delete Product] Error:', error)
+
+    // Detailed error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ [Delete Product] Error details:', errorMessage)
+
     return NextResponse.json(
-      { error: 'Failed to delete product' },
+      {
+        error: 'Failed to delete product',
+        details: errorMessage
+      },
       { status: 500 }
     )
   }

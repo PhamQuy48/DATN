@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { checkAuth } from '@/lib/auth/check-auth'
+import { notifyUser } from '@/lib/notifications/sse'
 
 // GET /api/orders - Get all orders (admin) or user's orders
 export async function GET(request: NextRequest) {
   try {
+    console.log('📥 GET /api/orders - Fetching orders...')
+
     const user = await checkAuth(request)
 
     if (!user) {
+      console.log('❌ Unauthorized - No user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('👤 User:', user.email, '| Role:', user.role, '| ID:', user.id)
 
     const searchParams = request.nextUrl.searchParams
     const page = parseInt(searchParams.get('page') || '1')
@@ -21,12 +27,18 @@ export async function GET(request: NextRequest) {
     // If not admin or staff, only show user's own orders
     if (user.role !== 'ADMIN' && user.role !== 'STAFF') {
       where.userId = user.id
+      console.log('🔒 Filtering by userId:', user.id)
+    } else {
+      console.log('👑 Admin/Staff - Showing all orders')
     }
 
     // Filter by status if provided
     if (status) {
       where.status = status
+      console.log('🔍 Filtering by status:', status)
     }
+
+    console.log('📋 Query params:', { page, limit, where })
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
@@ -48,6 +60,14 @@ export async function GET(request: NextRequest) {
       prisma.order.count({ where }),
     ])
 
+    console.log('✅ Found', orders.length, 'orders (Total:', total, ')')
+
+    if (orders.length > 0) {
+      console.log('📦 Latest order:', orders[0].orderNumber, '|', orders[0].customerName)
+    } else {
+      console.log('⚠️ No orders found for this filter')
+    }
+
     return NextResponse.json({
       orders,
       pagination: {
@@ -58,9 +78,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching orders:', error)
+    console.error('❌ Error fetching orders:', error)
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to fetch orders' },
+      { error: 'Failed to fetch orders', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -144,12 +165,18 @@ export async function POST(request: NextRequest) {
 
     // Generate order number
     const orderNumber = `DH${Date.now().toString().slice(-8)}`
+    console.log('📦 Creating order:', orderNumber)
 
     // Determine payment status based on payment method
     // COD = PENDING (pay on delivery), others = PAID (prepaid)
     const paymentStatus = paymentMethod === 'cod' ? 'PENDING' : 'PAID'
 
+    console.log('💳 Payment method:', paymentMethod, '→ Status:', paymentStatus)
+    console.log('👤 User ID:', user.id)
+    console.log('📋 Items count:', items.length)
+
     // Create order with items
+    console.log('🔄 Creating order in database...')
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -181,6 +208,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('✅ Order created successfully in database!')
+    console.log('📦 Order ID:', order.id)
+    console.log('🔢 Order Number:', order.orderNumber)
+    console.log('💰 Total Amount:', order.totalAmount)
+
     // Decrease stock for all ordered products
     for (const item of items) {
       await prisma.product.update({
@@ -205,19 +237,49 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create notification for admin
-    await prisma.notification.create({
-      data: {
-        title: 'Đơn hàng mới',
-        message: `Khách hàng ${customerName} vừa đặt đơn hàng #${orderNumber} với tổng giá trị ${totalAmount.toLocaleString('vi-VN')}đ`,
-        type: 'ORDER',
-        orderId: order.id,
-        read: false
-      }
+    // Create notification for ALL admin users
+    const adminUsers = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true, name: true, email: true }
     })
 
+    console.log(`📢 Sending notifications to ${adminUsers.length} admin(s)...`)
+
+    // Create notification for each admin and send via SSE
+    for (const admin of adminUsers) {
+      const adminNotification = await prisma.notification.create({
+        data: {
+          userId: admin.id,
+          title: '🛒 Đơn hàng mới',
+          message: `Khách hàng ${customerName} vừa đặt đơn hàng #${orderNumber} với tổng giá trị ${totalAmount.toLocaleString('vi-VN')}đ`,
+          type: 'ORDER',
+          orderId: order.id,
+          read: false
+        },
+        include: {
+          order: {
+            select: {
+              id: true,
+              orderNumber: true,
+              totalAmount: true,
+              status: true,
+              customerName: true
+            }
+          }
+        }
+      })
+
+      // Send real-time notification to admin via SSE
+      notifyUser(admin.id, {
+        ...adminNotification,
+        createdAt: adminNotification.createdAt.toISOString()
+      })
+
+      console.log(`✅ Notification sent to admin: ${admin.email}`)
+    }
+
     // Create notification for customer (order confirmation)
-    await prisma.notification.create({
+    const customerNotification = await prisma.notification.create({
       data: {
         title: '✅ Đặt hàng thành công',
         message: `Đơn hàng #${orderNumber} của bạn đã được xác nhận. Tổng thanh toán: ${totalAmount.toLocaleString('vi-VN')}đ. Chúng tôi sẽ xử lý đơn hàng trong thời gian sớm nhất.`,
@@ -225,8 +287,29 @@ export async function POST(request: NextRequest) {
         orderId: order.id,
         userId: user.id,
         read: false
+      },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalAmount: true,
+            status: true
+          }
+        }
       }
     })
+
+    // Send real-time notification to customer via SSE
+    notifyUser(user.id, {
+      ...customerNotification,
+      createdAt: customerNotification.createdAt.toISOString()
+    })
+
+    console.log(`✅ Notification sent to customer: ${user.email}`)
+
+    console.log('🎉 Order creation completed successfully!')
+    console.log('📤 Returning response to client...')
 
     return NextResponse.json(
       {
@@ -236,9 +319,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating order:', error)
+    console.error('❌ ERROR creating order:', error)
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: 'Failed to create order', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

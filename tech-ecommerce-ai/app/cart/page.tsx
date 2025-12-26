@@ -11,6 +11,7 @@ import { useCartStore } from '@/lib/store/cart-store'
 import { formatPrice } from '@/lib/utils/format'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isValidImageUrl } from '@/lib/utils/image-validator'
 
 export default function CartPage() {
   const router = useRouter()
@@ -150,6 +151,7 @@ export default function CartPage() {
               const price = item.product.salePrice || item.product.price
               const totalItemPrice = price * item.quantity
               const isSelected = selectedItemIds.includes(item.product.id)
+              const hasValidThumbnail = isValidImageUrl(item.product.thumbnail)
 
               return (
                 <div
@@ -174,12 +176,20 @@ export default function CartPage() {
                       href={`/products/${item.product.slug}`}
                       className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100"
                     >
-                      <Image
-                        src={item.product.thumbnail}
-                        alt={item.product.name}
-                        fill
-                        className="object-cover"
-                      />
+                      {hasValidThumbnail ? (
+                        <Image
+                          src={item.product.thumbnail}
+                          alt={item.product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                          <div className="text-center">
+                            <div className="text-4xl">📦</div>
+                          </div>
+                        </div>
+                      )}
                     </Link>
 
                     {/* Info */}

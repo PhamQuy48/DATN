@@ -51,3 +51,17 @@ prisma/migrations/
 # Windows reserved files (avoid accidental creation)
 nul
 NUL
+
+# Documentation files (không commit - chỉ giữ README.md)
+*.md
+!README.md
+
+# Batch/Shell scripts (utility only - không commit)
+*.bat
+*.sh
+
+# Temporary/Log files
+*.tmp
+*.temp
+*.log
+verify-deletion.js

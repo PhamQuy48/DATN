@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { formatPrice } from '@/lib/utils/format'
+import { isValidImageUrl } from '@/lib/utils/image-validator'
 import {
   Package,
   CheckCircle,
@@ -832,16 +833,24 @@ export default function StaffPage() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {filteredProducts.map((product) => (
+                {filteredProducts.map((product) => {
+                  const hasValidThumbnail = isValidImageUrl(product.thumbnail)
+                  return (
                   <div key={product.id} className="bg-white rounded-lg shadow-sm border p-4">
                     <div className="flex items-center gap-4">
                       <div className="relative w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0">
-                        <Image
-                          src={product.thumbnail || '/placeholder-product.jpg'}
-                          alt={product.name}
-                          fill
-                          className="object-cover rounded-lg"
-                        />
+                        {hasValidThumbnail ? (
+                          <Image
+                            src={product.thumbnail}
+                            alt={product.name}
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg">
+                            <div className="text-2xl">📦</div>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 truncate">
@@ -873,7 +882,8 @@ export default function StaffPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

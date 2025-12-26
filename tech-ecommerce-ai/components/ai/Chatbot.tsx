@@ -204,13 +204,19 @@ export default function Chatbot({ onClose }: ChatbotProps) {
                     className="flex gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-red-300 hover:shadow-lg transition-all group"
                   >
                     <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                      <Image
-                        src={product.images?.[0] || '/images/placeholder.png'}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform"
-                        unoptimized
-                      />
+                      {product.images?.[0] && product.images[0].trim() !== '' && (product.images[0].startsWith('http') || product.images[0].startsWith('/')) ? (
+                        <Image
+                          src={product.images[0]}
+                          alt={product.name}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                          <span className="text-3xl">📦</span>
+                        </div>
+                      )}
                       {product.discount > 0 && (
                         <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded font-bold">
                           -{product.discount}%

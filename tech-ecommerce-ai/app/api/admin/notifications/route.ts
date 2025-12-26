@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db/prisma'
 
 // GET /api/admin/notifications - Get all notifications for admin
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get admin session from cookie
+    const sessionCookie = request.cookies.get('admin_session')
 
-    if (!session?.user?.email) {
+    if (!sessionCookie?.value) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
+    // Verify user is admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: sessionCookie.value },
+      select: { id: true, email: true, role: true, banned: true }
     })
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN' || user.banned) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -25,9 +25,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
 
-    // Get notifications
+    // Get notifications for this admin
+    const whereClause: any = { userId: user.id }
+    if (unreadOnly) {
+      whereClause.read = false
+    }
+
     const notifications = await prisma.notification.findMany({
-      where: unreadOnly ? { read: false } : undefined,
+      where: whereClause,
       include: {
         order: {
           select: {
@@ -42,9 +47,9 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
-    // Get unread count
+    // Get unread count for this admin
     const unreadCount = await prisma.notification.count({
-      where: { read: false }
+      where: { userId: user.id, read: false }
     })
 
     return NextResponse.json({
@@ -63,18 +68,20 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/notifications - Mark notification(s) as read
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get admin session from cookie
+    const sessionCookie = request.cookies.get('admin_session')
 
-    if (!session?.user?.email) {
+    if (!sessionCookie?.value) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
+    // Verify user is admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: sessionCookie.value },
+      select: { id: true, role: true, banned: true }
     })
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN' || user.banned) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -82,9 +89,9 @@ export async function PATCH(request: NextRequest) {
     const { notificationId, markAllAsRead } = body
 
     if (markAllAsRead) {
-      // Mark all notifications as read
+      // Mark all notifications as read for this admin
       await prisma.notification.updateMany({
-        where: { read: false },
+        where: { userId: user.id, read: false },
         data: { read: true }
       })
 
@@ -93,9 +100,9 @@ export async function PATCH(request: NextRequest) {
         success: true
       })
     } else if (notificationId) {
-      // Mark specific notification as read
-      await prisma.notification.update({
-        where: { id: notificationId },
+      // Mark specific notification as read (verify ownership)
+      await prisma.notification.updateMany({
+        where: { id: notificationId, userId: user.id },
         data: { read: true }
       })
 
@@ -121,18 +128,20 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/admin/notifications - Delete notification(s)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get admin session from cookie
+    const sessionCookie = request.cookies.get('admin_session')
 
-    if (!session?.user?.email) {
+    if (!sessionCookie?.value) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
+    // Verify user is admin
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { id: sessionCookie.value },
+      select: { id: true, role: true, banned: true }
     })
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.role !== 'ADMIN' || user.banned) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -141,9 +150,9 @@ export async function DELETE(request: NextRequest) {
     const deleteAll = searchParams.get('all') === 'true'
 
     if (deleteAll) {
-      // Delete all read notifications
+      // Delete all read notifications for this admin
       await prisma.notification.deleteMany({
-        where: { read: true }
+        where: { userId: user.id, read: true }
       })
 
       return NextResponse.json({
@@ -151,9 +160,9 @@ export async function DELETE(request: NextRequest) {
         success: true
       })
     } else if (notificationId) {
-      // Delete specific notification
-      await prisma.notification.delete({
-        where: { id: notificationId }
+      // Delete specific notification (verify ownership)
+      await prisma.notification.deleteMany({
+        where: { id: notificationId, userId: user.id }
       })
 
       return NextResponse.json({

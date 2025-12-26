@@ -1,0 +1,30 @@
+{
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    // Disable console warnings (we use logger utility instead)
+    "no-console": "off",
+
+    // React hooks rules
+    "react-hooks/exhaustive-deps": "warn",
+
+    // TypeScript rules
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+
+    // React rules
+    "react/no-unescaped-entities": "off",
+    "react/display-name": "off",
+
+    // Next.js specific
+    "@next/next/no-img-element": "warn",
+    "@next/next/no-html-link-for-pages": "off"
+  }
+}

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import path from 'path'
 
 const nextConfig: NextConfig = {
   images: {
@@ -46,7 +47,7 @@ const nextConfig: NextConfig = {
     return config
   },
   // Output configuration to prevent WASM issues
-  outputFileTracingRoot: undefined,
+  outputFileTracingRoot: path.join(__dirname, '..'),
   outputFileTracingIncludes: {},
   outputFileTracingExcludes: {
     '*': [

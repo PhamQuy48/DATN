@@ -132,12 +132,18 @@ export default function ProductDetailPage() {
     : 0
   const finalPrice = product.salePrice || product.price
 
-  // Ensure images is always an array
+  // Validate image URL
+  const validateImageUrl = (url: string | null | undefined): boolean => {
+    if (!url || url.trim() === '') return false
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')
+  }
+
+  // Ensure images is always an array with valid URLs
   const images = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : product.thumbnail
-    ? [product.thumbnail]
-    : ['/images/placeholder.png']
+    ? product.images.filter(img => validateImageUrl(img))
+    : validateImageUrl(product.thumbnail)
+    ? [product.thumbnail!]
+    : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -170,13 +176,22 @@ export default function ProductDetailPage() {
             <div>
               {/* Main Image */}
               <div className="aspect-square rounded-2xl overflow-hidden bg-gray-50 mb-3 border border-gray-200">
-                <Image
-                  src={images[selectedImage]}
-                  alt={product.name}
-                  width={800}
-                  height={800}
-                  className="w-full h-full object-cover"
-                />
+                {images.length > 0 ? (
+                  <Image
+                    src={images[selectedImage]}
+                    alt={product.name}
+                    width={800}
+                    height={800}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="text-center">
+                      <div className="text-9xl mb-4">📦</div>
+                      <p className="text-lg text-gray-500 font-medium">Không có hình ảnh</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Thumbnails */}

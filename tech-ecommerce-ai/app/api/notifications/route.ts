@@ -6,18 +6,24 @@ import { prisma } from '@/lib/db/prisma'
 // GET /api/notifications - Get user's notifications
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [Notifications API] Starting request...')
     const session = await getServerSession(authOptions)
+    console.log('🔍 [Notifications API] Session:', session ? 'Found' : 'Not found', session?.user?.email)
 
     if (!session?.user?.email) {
+      console.log('❌ [Notifications API] No session or email')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get user
+    console.log('🔍 [Notifications API] Finding user:', session.user.email)
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
     })
+    console.log('🔍 [Notifications API] User found:', user ? user.id : 'Not found')
 
     if (!user) {
+      console.log('❌ [Notifications API] User not found in database')
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
@@ -25,7 +31,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
 
+    console.log('🔍 [Notifications API] Query params:', { limit, unreadOnly, userId: user.id })
+
     // Get notifications for this user
+    console.log('🔍 [Notifications API] Fetching notifications...')
     const notifications = await prisma.notification.findMany({
       where: {
         userId: user.id,
@@ -44,6 +53,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       take: limit
     })
+    console.log('✅ [Notifications API] Found notifications:', notifications.length)
 
     // Get unread count
     const unreadCount = await prisma.notification.count({
@@ -52,15 +62,35 @@ export async function GET(request: NextRequest) {
         read: false
       }
     })
+    console.log('✅ [Notifications API] Unread count:', unreadCount)
 
-    return NextResponse.json({
-      notifications,
+    // Serialize dates to ISO strings - explicitly pick fields
+    console.log('🔍 [Notifications API] Serializing notifications...')
+    const serializedNotifications = notifications.map(n => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      read: n.read,
+      userId: n.userId,
+      orderId: n.orderId,
+      createdAt: n.createdAt.toISOString(),
+      updatedAt: n.updatedAt.toISOString(),
+      order: n.order || null
+    }))
+
+    console.log('🔍 [Notifications API] Serialized:', serializedNotifications.length)
+    const response = {
+      notifications: serializedNotifications,
       unreadCount
-    })
+    }
+    console.log('✅ [Notifications API] Returning response')
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Error fetching notifications:', error)
+    console.error('❌ [Notifications API] ERROR:', error)
+    console.error('❌ [Notifications API] Error stack:', error instanceof Error ? error.stack : 'No stack')
     return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
+      { error: 'Failed to fetch notifications', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

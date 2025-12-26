@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { checkAuth } from '@/lib/auth/check-auth'
+import { notifyUser } from '@/lib/notifications/sse'
 
 // POST /api/orders/[id]/cancel - Cancel an order
 export async function POST(
@@ -66,7 +67,7 @@ export async function POST(
     }
 
     // Create notification for customer
-    await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         title: '❌ Đơn hàng đã hủy',
         message: `Đơn hàng #${order.orderNumber} của bạn đã được hủy thành công. Số lượng sản phẩm đã được hoàn lại kho.`,
@@ -74,7 +75,23 @@ export async function POST(
         orderId: order.id,
         userId: user.id,
         read: false
+      },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            totalAmount: true,
+            status: true
+          }
+        }
       }
+    })
+
+    // Send real-time notification via SSE
+    notifyUser(user.id, {
+      ...notification,
+      createdAt: notification.createdAt.toISOString()
     })
 
     return NextResponse.json({

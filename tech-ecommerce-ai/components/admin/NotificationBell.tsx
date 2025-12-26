@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react'
+import { Bell, Check, CheckCheck, Trash2, X, BellRing } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import Link from 'next/link'
@@ -27,16 +27,178 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
+  // Request browser notification permission
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission)
+    }
+  }, [])
+
+  // Setup SSE connection for real-time notifications
   useEffect(() => {
     fetchNotifications()
+    connectToSSE()
 
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000)
-
-    return () => clearInterval(interval)
+    return () => {
+      disconnectSSE()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const connectToSSE = () => {
+    // Close existing connection if any
+    disconnectSSE()
+
+    try {
+      // EventSource automatically sends cookies for same-origin requests
+      const eventSource = new EventSource('/api/admin/notifications/stream')
+      eventSourceRef.current = eventSource
+
+      eventSource.onopen = () => {
+        console.log('✅ Admin SSE Connected - Real-time notifications active')
+      }
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.type === 'connected') {
+            console.log('🔔 Admin notification stream connected:', data.userId)
+          } else if (data.type === 'notification') {
+            // New notification received - update UI immediately
+            handleNewNotification(data.notification)
+          } else if (data.type === 'unread_count') {
+            // Unread count updated
+            setUnreadCount(data.count)
+          }
+        } catch (error) {
+          console.error('Error parsing SSE message:', error)
+        }
+      }
+
+      eventSource.onerror = (error) => {
+        console.error('Admin SSE connection error:', error)
+        eventSource.close()
+
+        // Reconnect after 5 seconds
+        setTimeout(() => {
+          console.log('🔄 Reconnecting admin SSE...')
+          connectToSSE()
+        }, 5000)
+      }
+    } catch (error) {
+      console.error('Failed to create admin SSE connection:', error)
+    }
+  }
+
+  const disconnectSSE = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+      console.log('🔌 Admin SSE Disconnected')
+    }
+  }
+
+  const handleNewNotification = (notification: Notification) => {
+    // Add to notifications list at the top
+    setNotifications(prev => [notification, ...prev.slice(0, 9)]) // Keep only 10 items
+
+    // Update unread count
+    setUnreadCount(prev => prev + 1)
+
+    // Show browser notification
+    showBrowserNotification(notification)
+
+    // Play notification sound
+    playNotificationSound()
+  }
+
+  const showBrowserNotification = (notification: Notification) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return
+    }
+
+    // Request permission if not granted
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission)
+        if (permission === 'granted') {
+          displayBrowserNotification(notification)
+        }
+      })
+    } else if (Notification.permission === 'granted') {
+      displayBrowserNotification(notification)
+    }
+  }
+
+  const displayBrowserNotification = (notification: Notification) => {
+    try {
+      const browserNotif = new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: notification.id,
+        requireInteraction: true, // Admin notifications stay until clicked
+        silent: false
+      })
+
+      browserNotif.onclick = () => {
+        window.focus()
+        if (notification.orderId) {
+          window.location.href = `/admin/orders`
+        }
+        browserNotif.close()
+      }
+
+      // Auto close after 10 seconds (longer for admin)
+      setTimeout(() => browserNotif.close(), 10000)
+    } catch (error) {
+      console.error('Error showing browser notification:', error)
+    }
+  }
+
+  const playNotificationSound = () => {
+    try {
+      // Create a notification beep sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.3)
+    } catch (error) {
+      // Silently fail if audio not supported
+    }
+  }
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Trình duyệt của bạn không hỗ trợ thông báo đẩy')
+      return
+    }
+
+    const permission = await Notification.requestPermission()
+    setNotificationPermission(permission)
+
+    if (permission === 'granted') {
+      alert('✅ Đã bật thông báo đẩy! Admin sẽ nhận thông báo real-time khi có đơn hàng mới.')
+    } else {
+      alert('❌ Bạn đã từ chối thông báo đẩy. Vui lòng bật lại trong cài đặt trình duyệt.')
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -154,26 +316,45 @@ export default function NotificationBell() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[32rem] flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Thông báo</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-gray-900">Thông báo</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    disabled={loading}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    Đánh dấu tất cả đã đọc
+                  </button>
+                )}
                 <button
-                  onClick={markAllAsRead}
-                  disabled={loading}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 disabled:opacity-50"
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 hover:bg-gray-100 rounded"
                 >
-                  <CheckCheck className="w-4 h-4" />
-                  Đánh dấu tất cả đã đọc
+                  <X className="w-4 h-4 text-gray-500" />
                 </button>
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
+              </div>
             </div>
+
+            {/* Browser Notification Permission */}
+            {notificationPermission !== 'granted' && (
+              <button
+                onClick={requestNotificationPermission}
+                className="w-full mt-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <BellRing className="w-4 h-4" />
+                Bật thông báo đẩy real-time
+              </button>
+            )}
+            {notificationPermission === 'granted' && (
+              <div className="mt-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-medium flex items-center justify-center gap-2">
+                <BellRing className="w-4 h-4" />
+                ✅ Thông báo real-time đã bật
+              </div>
+            )}
           </div>
 
           {/* Notifications List */}

@@ -1,1 +1,15 @@
+# NULL files
 nul
+NUL
+
+# Documentation files (không commit)
+*.md
+!README.md
+
+# Batch scripts (utility only)
+*.bat
+
+# Temporary files
+*.tmp
+*.temp
+*.log

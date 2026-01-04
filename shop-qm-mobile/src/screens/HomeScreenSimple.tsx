@@ -77,7 +77,7 @@ export default function HomeScreenSimple({ navigation }: any) {
 
       {/* Banner */}
       <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>SHOP QM</Text>
+        <Text style={styles.bannerTitle}>Thế Giới Công Nghệ</Text>
         <Text style={styles.bannerSubtitle}>Công nghệ hàng đầu</Text>
       </View>
 

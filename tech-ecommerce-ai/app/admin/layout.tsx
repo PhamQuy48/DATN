@@ -14,6 +14,8 @@ import {
   Home,
   LogOut,
   Ticket,
+  Image as ImageIcon,
+  Monitor,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Image from 'next/image'
@@ -52,6 +54,16 @@ const menuItems = [
     name: 'Mã giảm giá',
     href: '/admin/vouchers',
     icon: Ticket,
+  },
+  {
+    name: 'Quản lý Banners',
+    href: '/admin/banners',
+    icon: Monitor,
+  },
+  {
+    name: 'Cài đặt Website',
+    href: '/admin/site-settings',
+    icon: ImageIcon,
   },
   {
     name: 'Cài đặt',
@@ -161,11 +173,11 @@ export default function AdminLayout({
           {/* Logo */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">QM</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-red-600 via-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-white font-black text-base">QM</span>
               </div>
               <div>
-                <h1 className="font-bold text-gray-900">SHOP QM</h1>
+                <h1 className="font-bold text-gray-900">Thế Giới Công Nghệ</h1>
                 <p className="text-xs text-gray-500">Admin Panel</p>
               </div>
             </div>

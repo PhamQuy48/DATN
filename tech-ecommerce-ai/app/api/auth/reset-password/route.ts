@@ -6,9 +6,11 @@ export async function POST(request: NextRequest) {
   try {
     const { token, newPassword } = await request.json()
 
+    console.log('[Reset Password] 🔑 Reset password request with token')
+
     if (!token || !newPassword) {
       return NextResponse.json(
-        { error: 'Mã xác nhận và mật khẩu mới là bắt buộc' },
+        { error: 'Token và mật khẩu mới là bắt buộc' },
         { status: 400 }
       )
     }
@@ -21,68 +23,62 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find reset token
-    const resetToken = await prisma.passwordReset.findUnique({
-      where: { token }
+    // Find user by reset token
+    const user = await prisma.user.findUnique({
+      where: { resetToken: token },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        resetToken: true,
+        resetTokenExpiry: true,
+        banned: true
+      }
     })
 
-    if (!resetToken) {
+    if (!user) {
+      console.log('[Reset Password] ❌ Invalid token')
       return NextResponse.json(
-        { error: 'Mã xác nhận không hợp lệ' },
+        { error: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn' },
         { status: 400 }
+      )
+    }
+
+    if (user.banned) {
+      console.log('[Reset Password] ❌ User is banned:', user.email)
+      return NextResponse.json(
+        { error: 'Tài khoản của bạn đã bị khóa' },
+        { status: 403 }
       )
     }
 
     // Check if token is expired
-    if (new Date() > resetToken.expiresAt) {
+    if (!user.resetTokenExpiry || new Date() > user.resetTokenExpiry) {
+      console.log('[Reset Password] ❌ Token expired for:', user.email)
       return NextResponse.json(
-        { error: 'Mã xác nhận đã hết hạn. Vui lòng yêu cầu mã mới.' },
+        { error: 'Link đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu link mới.' },
         { status: 400 }
       )
     }
 
-    // Check if token has been used
-    if (resetToken.used) {
-      return NextResponse.json(
-        { error: 'Mã xác nhận đã được sử dụng' },
-        { status: 400 }
-      )
-    }
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: resetToken.email }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Người dùng không tồn tại' },
-        { status: 404 }
-      )
-    }
+    console.log('[Reset Password] ✅ Valid token for user:', user.email)
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10)
 
-    // Update user password and mark token as used in a transaction
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { email: resetToken.email },
-        data: { password: hashedPassword }
-      }),
-      prisma.passwordReset.update({
-        where: { token },
-        data: { used: true }
-      })
-    ])
+    console.log('[Reset Password] 🔐 Hashed new password')
 
-    // Delete all other unused tokens for this email
-    await prisma.passwordReset.deleteMany({
-      where: {
-        email: resetToken.email,
-        used: false
+    // Update user password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null
       }
     })
+
+    console.log('[Reset Password] ✅ Password updated successfully for:', user.email)
 
     return NextResponse.json({
       success: true,
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in reset password:', error)
+    console.error('[Reset Password] ❌ Error:', error)
     return NextResponse.json(
       { error: 'Có lỗi xảy ra. Vui lòng thử lại sau.' },
       { status: 500 }

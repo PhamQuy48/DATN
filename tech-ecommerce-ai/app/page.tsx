@@ -275,7 +275,7 @@ export default async function HomePage() {
       {/* Trust Badges */}
       <section className="py-12 bg-gray-50">
         <div className="container-custom">
-          <h2 className="text-2xl font-bold text-center mb-8">Tại sao chọn SHOP QM?</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">Tại sao chọn Thế Giới Công Nghệ?</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">

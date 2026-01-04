@@ -18,7 +18,7 @@ export default function CheckoutSuccessPage() {
           {/* Message */}
           <h1 className="text-4xl font-bold mb-4">Đặt hàng thành công!</h1>
           <p className="text-xl text-gray-600 mb-8">
-            Cảm ơn bạn đã mua sắm tại SHOP QM
+            Cảm ơn bạn đã mua sắm tại Thế Giới Công Nghệ
           </p>
 
           {/* Order Info */}

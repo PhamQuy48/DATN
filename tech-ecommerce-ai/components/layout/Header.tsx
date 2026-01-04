@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { ShoppingCart, User, Search, Menu, Sparkles, Heart, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useCartStore } from '@/lib/store/cart-store'
@@ -10,11 +11,15 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import UserNotificationBell from './UserNotificationBell'
 
+// Logo mặc định (fallback)
+const DEFAULT_LOGO_URL = 'https://via.placeholder.com/40x40?text=LOGO'
+
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO_URL)
   const router = useRouter()
   const { data: session, status } = useSession()
   const totalItems = useCartStore((state) => state.getTotalItems())
@@ -22,7 +27,23 @@ export default function Header() {
 
   useEffect(() => {
     setMounted(true)
+    // Fetch logo từ database
+    fetchLogo()
   }, [])
+
+  const fetchLogo = async () => {
+    try {
+      const response = await fetch('/api/site-settings?key=logo')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.value) {
+          setLogoUrl(data.value)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching logo:', error)
+    }
+  }
 
   const handleLogout = async () => {
     await signOut({ redirect: false })
@@ -38,12 +59,13 @@ export default function Header() {
         <div className="flex items-center justify-between py-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 text-xl font-bold group relative">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
-              <span className="text-white font-bold text-lg">QM</span>
+            {/* 🎨 LOGO - Chữ QM */}
+            <div className="relative w-12 h-12 bg-gradient-to-br from-red-600 via-orange-500 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
+              <span className="text-white font-black text-xl tracking-tight">QM</span>
             </div>
             <div className="relative">
               <span className="bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text text-transparent">
-                SHOP QM
+                Thế Giới Công Nghệ
               </span>
               <span className="absolute -top-2 -right-8 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">
                 TẾT
@@ -229,6 +251,9 @@ export default function Header() {
             </Link>
             <Link href="/products?category=accessory" className="py-2 hover:text-primary-600">
               Phụ kiện
+            </Link>
+            <Link href="/deals" className="py-2 text-red-600 font-semibold">
+              🔥 Khuyến mãi HOT
             </Link>
             <Link href="/ai-assistant" className="py-2 text-primary-600 font-medium">
               AI Assistant

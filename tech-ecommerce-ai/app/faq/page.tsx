@@ -20,7 +20,7 @@ const faqs: FAQItem[] = [
   {
     category: 'Sản phẩm',
     question: 'Sản phẩm có chính hãng không?',
-    answer: 'Tất cả sản phẩm tại SHOP QM đều là hàng chính hãng 100%, có đầy đủ tem, hóa đơn VAT và được bảo hành chính hãng theo quy định của nhà sản xuất.',
+    answer: 'Tất cả sản phẩm tại Thế Giới Công Nghệ đều là hàng chính hãng 100%, có đầy đủ tem, hóa đơn VAT và được bảo hành chính hãng theo quy định của nhà sản xuất.',
   },
   {
     category: 'Đơn hàng',

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import nodemailer from 'nodemailer'
+import { notifyUser } from '@/lib/notifications/sse'
 
 // Helper function to verify admin session
 async function verifyAdminSession(request: NextRequest) {
@@ -37,7 +38,7 @@ const generateVoucherEmail = (userName: string, voucher: any) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mã giảm giá đặc biệt từ SHOP QM</title>
+  <title>Mã giảm giá đặc biệt từ Thế Giới Công Nghệ</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -51,7 +52,7 @@ const generateVoucherEmail = (userName: string, voucher: any) => {
                 🎉 MÃ GIẢM GIÁ ĐẶC BIỆT
               </h1>
               <p style="margin: 10px 0 0; color: #d1fae5; font-size: 14px;">
-                Dành riêng cho bạn từ SHOP QM
+                Dành riêng cho bạn từ Thế Giới Công Nghệ
               </p>
             </td>
           </tr>
@@ -151,7 +152,7 @@ const generateVoucherEmail = (userName: string, voucher: any) => {
               </p>
               <p style="margin: 0; color: #1f2937; font-size: 14px; font-weight: 600;">
                 Trân trọng,<br>
-                Đội ngũ SHOP QM
+                Đội ngũ Thế Giới Công Nghệ
               </p>
             </td>
           </tr>
@@ -160,7 +161,7 @@ const generateVoucherEmail = (userName: string, voucher: any) => {
           <tr>
             <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 10px; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} SHOP QM. Tất cả quyền được bảo lưu.
+                © ${new Date().getFullYear()} Thế Giới Công Nghệ. Tất cả quyền được bảo lưu.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                 Email này được gửi tự động, vui lòng không trả lời.
@@ -237,12 +238,12 @@ export async function POST(request: NextRequest) {
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
           to: user.email,
-          subject: `🎉 Mã giảm giá ${voucher.code} dành riêng cho bạn - SHOP QM`,
+          subject: `🎉 Mã giảm giá ${voucher.code} dành riêng cho bạn - Thế Giới Công Nghệ`,
           html: generateVoucherEmail(user.name, voucher),
         })
 
         // Create notification for user
-        await prisma.notification.create({
+        const notification = await prisma.notification.create({
           data: {
             userId: user.id,
             title: '🎁 Bạn nhận được mã giảm giá mới!',
@@ -251,6 +252,14 @@ export async function POST(request: NextRequest) {
             read: false
           }
         })
+
+        // Send real-time notification via SSE
+        notifyUser(user.id, {
+          ...notification,
+          createdAt: notification.createdAt.toISOString()
+        })
+
+        console.log(`✅ Voucher notification sent to user: ${user.email} (${user.id})`)
 
         successCount++
       } catch (error) {

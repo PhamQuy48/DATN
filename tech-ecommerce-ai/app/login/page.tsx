@@ -152,7 +152,7 @@ export default function LoginPage() {
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-xl">QM</span>
             </div>
-            <span className="text-2xl font-bold">SHOP QM</span>
+            <span className="text-2xl font-bold">Thế Giới Công Nghệ</span>
           </Link>
           <p className="text-red-100 mt-2">
             {isLogin ? 'Đăng nhập để tiếp tục mua sắm' : 'Tạo tài khoản mới'}

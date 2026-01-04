@@ -132,7 +132,7 @@ export default function AdminLoginPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">
-          <p>&copy; 2025 SHOP QM. All rights reserved.</p>
+          <p>&copy; 2025 Thế Giới Công Nghệ. All rights reserved.</p>
         </div>
       </div>
     </div>

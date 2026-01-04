@@ -50,7 +50,7 @@ export default function Chatbot({ onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Xin chào! 👋 Tôi là trợ lý AI của SHOP QM.\n\nTôi có thể giúp bạn:\n• Tìm sản phẩm phù hợp 💻\n• So sánh giá và tính năng 📊\n• Gợi ý theo ngân sách 💰\n\nBạn cần tìm gì hôm nay?',
+      content: 'Xin chào! 👋 Tôi là trợ lý AI của Thế Giới Công Nghệ.\n\nTôi có thể giúp bạn:\n• Tìm sản phẩm phù hợp 💻\n• So sánh giá và tính năng 📊\n• Gợi ý theo ngân sách 💰\n\nBạn cần tìm gì hôm nay?',
       timestamp: new Date(),
     },
   ])

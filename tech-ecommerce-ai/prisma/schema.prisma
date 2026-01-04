@@ -24,6 +24,13 @@ model User {
   phone         String?
   address       String?   @db.Text
 
+  // Password Reset
+  resetToken          String?   @unique
+  resetTokenExpiry    DateTime?
+
+  // Email Verification
+  verificationToken   String?   @unique
+
   // Relations
   orders        Order[]
   reviews       Review[]
@@ -33,6 +40,8 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   @@index([email])
+  @@index([resetToken])
+  @@index([verificationToken])
   @@map("users")
 }
 
@@ -321,4 +330,40 @@ model PasswordReset {
   @@index([token])
   @@index([expiresAt])
   @@map("password_resets")
+}
+
+// Site Settings Model - Quản lý logo và cấu hình website
+model SiteSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique // 'logo', 'favicon', 'siteName', etc.
+  value     String   @db.Text // URL hoặc giá trị setting
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("site_settings")
+}
+
+// Banner Model - Quản lý banners cho slider trang chủ
+model Banner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String   @db.Text
+  cta         String   // Call-to-action text (ví dụ: "Khám phá ngay")
+  link        String   // Link khi click vào banner
+  imageUrl    String   @db.Text // URL hình ảnh banner
+  gradient    String?  // Gradient fallback nếu không có ảnh
+  emoji       String?  // Emoji trang trí (optional)
+
+  // Thứ tự hiển thị và trạng thái
+  order       Int      @default(0) // Thứ tự hiển thị (0, 1, 2, 3...)
+  isActive    Boolean  @default(true) // Bật/tắt banner
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+  @@index([isActive])
+  @@map("banners")
 }

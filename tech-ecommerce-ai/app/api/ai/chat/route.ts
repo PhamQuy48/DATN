@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 
 // Shop information context
 const SHOP_INFO = {
-  name: 'SHOP QM',
+  name: 'Thế Giới Công Nghệ',
   description: 'Cửa hàng công nghệ hàng đầu Việt Nam',
   policies: {
     shipping: 'Giao hàng toàn quốc 2-3 ngày. Miễn phí ship đơn từ 500k. Ship COD toàn quốc.',

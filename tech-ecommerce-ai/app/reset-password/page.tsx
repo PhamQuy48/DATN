@@ -28,8 +28,13 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!token) {
-      toast.error('Vui lòng nhập mã xác nhận')
+    if (!token || token.trim().length === 0) {
+      toast.error('Vui lòng nhập mã xác nhận 6 số')
+      return
+    }
+
+    if (token.length !== 6 || !/^\d{6}$/.test(token)) {
+      toast.error('Mã xác nhận phải gồm 6 chữ số')
       return
     }
 
@@ -125,31 +130,50 @@ function ResetPasswordForm() {
             Đặt lại mật khẩu
           </h1>
           <p className="text-center text-gray-600 mb-8">
-            Nhập mã xác nhận từ email và mật khẩu mới của bạn
+            {searchParams.get('token')
+              ? 'Nhập mật khẩu mới của bạn để hoàn tất'
+              : 'Nhập mã 6 số từ email và mật khẩu mới của bạn'
+            }
           </p>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Reset Code */}
-            <div>
-              <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-2">
-                Mã xác nhận (6 số)
-              </label>
-              <input
-                id="token"
-                type="text"
-                value={token}
-                onChange={(e) => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="123456"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all text-center text-2xl font-mono tracking-widest"
-                maxLength={6}
-                disabled={loading}
-                autoFocus
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                Nhập mã 6 số nhận được từ email
-              </p>
-            </div>
+            {/* Reset Code - Only show if no token in URL */}
+            {!searchParams.get('token') && (
+              <div>
+                <label htmlFor="token" className="block text-sm font-medium text-gray-700 mb-2">
+                  Mã xác nhận 6 số
+                </label>
+                <input
+                  id="token"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={token}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '')
+                    setToken(value)
+                  }}
+                  placeholder="● ● ● ● ● ●"
+                  className="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all text-center text-3xl font-bold tracking-[0.5em] font-mono"
+                  disabled={loading}
+                  autoFocus
+                />
+                <p className="mt-2 text-xs text-gray-500 text-center">
+                  Nhập mã 6 số nhận được từ email hoặc click vào link trong email
+                </p>
+              </div>
+            )}
+
+            {/* Show code status if token is in URL */}
+            {searchParams.get('token') && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Mã xác nhận hợp lệ. Vui lòng nhập mật khẩu mới.</span>
+                </p>
+              </div>
+            )}
 
             {/* New Password */}
             <div>
@@ -230,9 +254,9 @@ function ResetPasswordForm() {
             <p className="text-sm text-amber-800">
               <strong>⚠️ Lưu ý:</strong>
               <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>Mã xác nhận có hiệu lực trong 15 phút</li>
-                <li>Mỗi mã chỉ sử dụng được 1 lần</li>
-                <li>Nếu không nhận được mã, <Link href="/forgot-password" className="underline font-semibold">yêu cầu gửi lại</Link></li>
+                <li>Link đặt lại mật khẩu có hiệu lực trong 15 phút</li>
+                <li>Mỗi link chỉ sử dụng được 1 lần</li>
+                <li>Nếu link hết hạn, <Link href="/forgot-password" className="underline font-semibold">yêu cầu link mới</Link></li>
               </ul>
             </p>
           </div>

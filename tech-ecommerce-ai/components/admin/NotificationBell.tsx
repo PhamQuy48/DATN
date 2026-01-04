@@ -28,6 +28,7 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
+  const reconnectAttemptsRef = useRef(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
 
@@ -84,11 +85,17 @@ export default function NotificationBell() {
         console.error('Admin SSE connection error:', error)
         eventSource.close()
 
-        // Reconnect after 5 seconds
-        setTimeout(() => {
-          console.log('🔄 Reconnecting admin SSE...')
-          connectToSSE()
-        }, 5000)
+        // Reconnect after 30 seconds (reduced spam)
+        // Only reconnect a few times to avoid infinite loop
+        if (reconnectAttemptsRef.current < 3) {
+          setTimeout(() => {
+            reconnectAttemptsRef.current++
+            console.log('🔄 Reconnecting admin SSE... (attempt', reconnectAttemptsRef.current, ')')
+            connectToSSE()
+          }, 30000)
+        } else {
+          console.log('⚠️ SSE max reconnect attempts reached. Please check database connection.')
+        }
       }
     } catch (error) {
       console.error('Failed to create admin SSE connection:', error)

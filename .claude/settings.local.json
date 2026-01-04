@@ -200,7 +200,17 @@
       "Bash(npm run lint)",
       "Bash(node verify-deletion.js:*)",
       "Bash(rd /s /q .next)",
-      "Bash(npx prisma db execute:*)"
+      "Bash(npx prisma db execute:*)",
+      "Bash(netsh advfirewall firewall show rule:*)",
+      "Bash(netsh advfirewall firewall add rule name=\"Next.js Dev Server Port 3004\" dir=in action=allow protocol=TCP localport=3004)",
+      "Bash(netsh advfirewall firewall add rule name=\"Expo Metro Bundler Port 8081\" dir=in action=allow protocol=TCP localport=8081)",
+      "Bash(npx ts-node:*)",
+      "Bash(node:*)",
+      "Bash(cmd //c check-mobile-status.bat)",
+      "Bash(\"check-mobile-status.bat\")",
+      "Bash(netsh advfirewall firewall show rule name=\"Next.js Dev Server Port 3004\")",
+      "Bash(cmd.exe /c \"C:\\\\Users\\\\TTC\\\\Documents\\\\DATN\\\\start-mysql.bat\")",
+      "Bash(npx tsc --noEmit)"
     ],
     "deny": [],
     "ask": []

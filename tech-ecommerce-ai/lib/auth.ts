@@ -67,23 +67,31 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role
       }
 
-      // Refresh user data from database on each request to ensure role is up-to-date
-      if (token.id && !user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { id: true, email: true, name: true, role: true, banned: true }
-        })
+      // Only refresh user data periodically (every 5 minutes) or on update trigger
+      const shouldRefresh = trigger === 'update' || !token.lastChecked || Date.now() - (token.lastChecked as number) > 5 * 60 * 1000
 
-        // If user is banned or deleted, clear token data to force logout
-        if (!dbUser || dbUser.banned) {
-          return { ...token, id: undefined, role: undefined, email: undefined, name: undefined } as any
-        }
+      if (token.id && !user && shouldRefresh) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true, email: true, name: true, role: true, banned: true }
+          })
 
-        if (dbUser) {
-          token.id = dbUser.id
-          token.email = dbUser.email
-          token.name = dbUser.name
-          token.role = dbUser.role
+          // If user is banned or deleted, clear token data to force logout
+          if (!dbUser || dbUser.banned) {
+            return { ...token, id: undefined, role: undefined, email: undefined, name: undefined } as any
+          }
+
+          if (dbUser) {
+            token.id = dbUser.id
+            token.email = dbUser.email
+            token.name = dbUser.name
+            token.role = dbUser.role
+            token.lastChecked = Date.now()
+          }
+        } catch (error) {
+          console.error('Error refreshing user token:', error)
+          // Return existing token on error
         }
       }
 

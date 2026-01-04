@@ -32,6 +32,8 @@ export default function UserNotificationBell() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const reconnectAttempts = useRef(0)
+  const maxReconnectAttempts = 5
 
   // Request browser notification permission
   useEffect(() => {
@@ -43,6 +45,9 @@ export default function UserNotificationBell() {
   // Setup SSE connection for real-time notifications
   useEffect(() => {
     if (status === 'authenticated') {
+      // Reset reconnect attempts when component mounts or status changes
+      reconnectAttempts.current = 0
+
       fetchNotifications()
       connectToSSE()
 
@@ -56,12 +61,20 @@ export default function UserNotificationBell() {
     // Close existing connection if any
     disconnectSSE()
 
+    // Check if we've exceeded max reconnect attempts
+    if (reconnectAttempts.current >= maxReconnectAttempts) {
+      console.log('❌ Max SSE reconnect attempts reached. Stopping reconnection.')
+      return
+    }
+
     try {
       const eventSource = new EventSource('/api/notifications/stream')
       eventSourceRef.current = eventSource
 
       eventSource.onopen = () => {
         console.log('✅ SSE Connected - Real-time notifications active')
+        // Reset reconnect attempts on successful connection
+        reconnectAttempts.current = 0
       }
 
       eventSource.onmessage = (event) => {
@@ -83,16 +96,26 @@ export default function UserNotificationBell() {
       }
 
       eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error)
+        console.error('SSE connection error. Attempt:', reconnectAttempts.current + 1)
         eventSource.close()
 
-        // Reconnect after 5 seconds
-        setTimeout(() => {
-          if (status === 'authenticated') {
-            console.log('🔄 Reconnecting to SSE...')
-            connectToSSE()
-          }
-        }, 5000)
+        // Increment reconnect attempts
+        reconnectAttempts.current += 1
+
+        // Only reconnect if authenticated and haven't exceeded max attempts
+        if (status === 'authenticated' && reconnectAttempts.current < maxReconnectAttempts) {
+          // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+          const backoffDelay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 32000)
+          console.log(`🔄 Reconnecting to SSE in ${backoffDelay / 1000}s... (Attempt ${reconnectAttempts.current}/${maxReconnectAttempts})`)
+
+          setTimeout(() => {
+            if (status === 'authenticated') {
+              connectToSSE()
+            }
+          }, backoffDelay)
+        } else if (reconnectAttempts.current >= maxReconnectAttempts) {
+          console.log('⚠️ Max reconnect attempts reached. Please refresh the page to restore real-time notifications.')
+        }
       }
     } catch (error) {
       console.error('Failed to create SSE connection:', error)

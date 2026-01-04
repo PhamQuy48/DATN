@@ -7,6 +7,7 @@ type WishlistStore = {
   items: Product[]
   addItem: (product: Product) => void
   removeItem: (productId: string) => void
+  toggleItem: (product: Product) => void
   isInWishlist: (productId: string) => boolean
   clearWishlist: () => void
 }
@@ -34,6 +35,21 @@ export const useWishlistStore = create<WishlistStore>()(
           items: get().items.filter((item) => item.id !== productId),
         })
         toast.success('Đã xóa khỏi danh sách yêu thích')
+      },
+
+      toggleItem: (product: Product) => {
+        const items = get().items
+        const exists = items.find((item) => item.id === product.id)
+
+        if (exists) {
+          set({
+            items: items.filter((item) => item.id !== product.id),
+          })
+          toast.success('Đã xóa khỏi danh sách yêu thích')
+        } else {
+          set({ items: [...items, product] })
+          toast.success('Đã thêm vào danh sách yêu thích')
+        }
       },
 
       isInWishlist: (productId: string) => {

@@ -64,13 +64,13 @@ export default function ForgotPasswordPage() {
             </h1>
 
             <p className="text-gray-600 mb-6 leading-relaxed">
-              Chúng tôi đã gửi mã xác nhận đến email <strong>{email}</strong>.
+              Chúng tôi đã gửi <strong className="text-blue-600">mã 6 số</strong> đến email <strong>{email}</strong>.
               Vui lòng kiểm tra hộp thư đến (hoặc thư rác) và làm theo hướng dẫn.
             </p>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
-                💡 <strong>Lưu ý:</strong> Mã xác nhận có hiệu lực trong 15 phút.
+                💡 <strong>Lưu ý:</strong> Mã 6 số có hiệu lực trong <strong>15 phút</strong>.
                 Nếu không nhận được email, vui lòng kiểm tra thư mục spam hoặc yêu cầu gửi lại.
               </p>
             </div>
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
                 href="/reset-password"
                 className="block w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
               >
-                Nhập mã xác nhận
+                Nhập mã 6 số
               </Link>
 
               <button
@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
             Quên mật khẩu?
           </h1>
           <p className="text-center text-gray-600 mb-8">
-            Nhập email của bạn, chúng tôi sẽ gửi mã xác nhận để đặt lại mật khẩu
+            Nhập email của bạn, chúng tôi sẽ gửi mã 6 số để đặt lại mật khẩu
           </p>
 
           {/* Form */}
@@ -166,7 +166,7 @@ export default function ForgotPasswordPage() {
               ) : (
                 <>
                   <Mail className="w-5 h-5" />
-                  Gửi mã xác nhận
+                  Gửi mã 6 số
                 </>
               )}
             </button>
@@ -174,14 +174,14 @@ export default function ForgotPasswordPage() {
 
           {/* Info */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600">
               <strong>💡 Gợi ý:</strong>
               <ul className="mt-2 space-y-1 list-disc list-inside">
                 <li>Kiểm tra cả thư mục spam nếu không thấy email</li>
-                <li>Mã xác nhận có hiệu lực trong 15 phút</li>
+                <li>Mã 6 số có hiệu lực trong 15 phút</li>
                 <li>Bạn có thể yêu cầu gửi lại email nếu cần</li>
               </ul>
-            </p>
+            </div>
           </div>
         </div>
 

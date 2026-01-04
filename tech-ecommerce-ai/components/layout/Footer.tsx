@@ -17,7 +17,7 @@ export default function Footer() {
               <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-blue-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold">SHOP QM</span>
+              <span className="text-xl font-bold">Thế Giới Công Nghệ</span>
             </Link>
             <p className="text-sm mb-4">
               Nền tảng thương mại điện tử công nghệ thông minh với AI,
@@ -88,7 +88,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-          <p>&copy; 2025 SHOP QM. Tất cả quyền được bảo lưu.</p>
+          <p>&copy; 2025 Thế Giới Công Nghệ. Tất cả quyền được bảo lưu.</p>
         </div>
       </div>
     </footer>

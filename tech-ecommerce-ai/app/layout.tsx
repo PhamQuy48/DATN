@@ -12,14 +12,14 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'SHOP QM - Cửa hàng công nghệ chất lượng',
-  description: 'Mua sắm sản phẩm công nghệ chính hãng, giá tốt tại SHOP QM',
-  keywords: ['công nghệ', 'laptop', 'smartphone', 'AI', 'thương mại điện tử', 'SHOP QM'],
+  title: 'Thế Giới Công Nghệ - Cửa hàng công nghệ chất lượng',
+  description: 'Mua sắm sản phẩm công nghệ chính hãng, giá tốt tại Thế Giới Công Nghệ',
+  keywords: ['công nghệ', 'laptop', 'smartphone', 'AI', 'thương mại điện tử', 'Thế Giới Công Nghệ'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'SHOP QM',
+    title: 'Thế Giới Công Nghệ',
   },
 }
 
@@ -41,7 +41,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
           <TetDecoration />
           {children}

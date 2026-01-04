@@ -19,7 +19,7 @@ export async function sendPasswordResetEmail(email: string, resetCode: string) {
   const mailOptions = {
     from: process.env.EMAIL_FROM,
     to: email,
-    subject: 'Đặt lại mật khẩu - SHOP QM',
+    subject: 'Đặt lại mật khẩu - Thế Giới Công Nghệ',
     html: `
       <!DOCTYPE html>
       <html>
@@ -92,7 +92,7 @@ export async function sendPasswordResetEmail(email: string, resetCode: string) {
           <div class="container">
             <div class="header">
               <h1>🔐 Đặt lại mật khẩu</h1>
-              <p>SHOP QM</p>
+              <p>Thế Giới Công Nghệ</p>
             </div>
             <div class="content">
               <h2>Xin chào!</h2>
@@ -122,11 +122,11 @@ export async function sendPasswordResetEmail(email: string, resetCode: string) {
 
               <p>Nếu bạn gặp vấn đề, vui lòng liên hệ với chúng tôi qua email hoặc hotline hỗ trợ.</p>
 
-              <p>Trân trọng,<br><strong>Đội ngũ SHOP QM</strong></p>
+              <p>Trân trọng,<br><strong>Đội ngũ Thế Giới Công Nghệ</strong></p>
             </div>
 
             <div class="footer">
-              <p>© 2025 SHOP QM. All rights reserved.</p>
+              <p>© 2025 Thế Giới Công Nghệ. All rights reserved.</p>
               <p>Email này được gửi tự động, vui lòng không trả lời.</p>
             </div>
           </div>

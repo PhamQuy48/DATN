@@ -13,7 +13,7 @@ export default function AboutPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-600 to-blue-600 rounded-3xl mb-6">
             <Sparkles className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-5xl font-bold mb-4">Về SHOP QM</h1>
+          <h1 className="text-5xl font-bold mb-4">Về Thế Giới Công Nghệ</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Nền tảng thương mại điện tử công nghệ uy tín,
             mang đến trải nghiệm mua sắm chất lượng và tin cậy
@@ -25,7 +25,7 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold mb-6">Câu chuyện của chúng tôi</h2>
           <div className="prose prose-lg max-w-none text-gray-600">
             <p className="mb-4">
-              SHOP QM được ra đời từ tầm nhìn tạo ra một nền tảng thương mại điện tử
+              Thế Giới Công Nghệ được ra đời từ tầm nhìn tạo ra một nền tảng thương mại điện tử
               hiện đại, nơi chất lượng sản phẩm và trải nghiệm người dùng được đặt lên hàng đầu.
             </p>
             <p className="mb-4">

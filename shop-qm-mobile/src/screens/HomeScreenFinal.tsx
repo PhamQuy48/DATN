@@ -90,7 +90,7 @@ export default function HomeScreenFinal({ navigation }: any) {
 
       {/* Banner */}
       <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>SHOP QM</Text>
+        <Text style={styles.bannerTitle}>Thế Giới Công Nghệ</Text>
         <Text style={styles.bannerSubtitle}>Công nghệ hàng đầu</Text>
         <Text style={styles.bannerDesc}>{products.length} sản phẩm chính hãng</Text>
       </View>

@@ -2,60 +2,98 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 
 type Banner = {
-  id: number
+  id: string
   title: string
   subtitle: string
   cta: string
   link: string
-  gradient: string
-  emoji?: string
+  gradient: string | null
+  emoji?: string | null
+  imageUrl: string
+  order: number
+  isActive: boolean
 }
 
-const banners: Banner[] = [
+// Banners mặc định (fallback nếu chưa có data trong DB)
+const defaultBanners: Banner[] = [
   {
-    id: 1,
+    id: '1',
     title: 'Mua sắm thông minh cùng AI',
     subtitle: 'Trợ lý AI giúp bạn tìm sản phẩm phù hợp nhất',
     cta: 'Khám phá ngay',
     link: '/products',
     gradient: 'from-orange-400 via-red-500 to-pink-600',
-    emoji: '🤖'
+    emoji: '🤖',
+    imageUrl: '',
+    order: 0,
+    isActive: true
   },
   {
-    id: 2,
+    id: '2',
     title: 'Flash Sale - Giảm đến 50%',
     subtitle: 'Sản phẩm công nghệ cao cấp với giá tốt nhất',
     cta: 'Mua ngay',
     link: '/products?sale=true',
     gradient: 'from-purple-500 via-pink-500 to-red-500',
-    emoji: '🔥'
+    emoji: '🔥',
+    imageUrl: '',
+    order: 1,
+    isActive: true
   },
   {
-    id: 3,
+    id: '3',
     title: 'Sản phẩm mới nhất 2025',
     subtitle: 'Cập nhật xu hướng công nghệ mới nhất',
     cta: 'Xem ngay',
     link: '/products?sort=newest',
     gradient: 'from-blue-500 via-cyan-500 to-teal-500',
-    emoji: '⚡'
+    emoji: '⚡',
+    imageUrl: '',
+    order: 2,
+    isActive: true
   },
   {
-    id: 4,
+    id: '4',
     title: 'Bảo hành chính hãng',
     subtitle: '100% sản phẩm chính hãng, bảo hành toàn quốc',
     cta: 'Tìm hiểu thêm',
     link: '/products',
     gradient: 'from-green-500 via-emerald-500 to-teal-500',
-    emoji: '✨'
+    emoji: '✨',
+    imageUrl: '',
+    order: 3,
+    isActive: true
   }
 ]
 
 export default function BannerSlider() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [banners, setBanners] = useState<Banner[]>(defaultBanners)
+
+  // Fetch banners từ database
+  useEffect(() => {
+    fetchBanners()
+  }, [])
+
+  const fetchBanners = async () => {
+    try {
+      const response = await fetch('/api/admin/banners?public=true')
+      if (response.ok) {
+        const data = await response.json()
+        if (data && data.length > 0) {
+          setBanners(data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching banners:', error)
+      // Sử dụng defaultBanners nếu fetch thất bại
+    }
+  }
 
   // Auto-play
   useEffect(() => {
@@ -97,11 +135,29 @@ export default function BannerSlider() {
         {banners.map((banner) => (
           <div
             key={banner.id}
-            className={`min-w-full h-full bg-gradient-to-br ${banner.gradient} relative flex items-center`}
+            className={`min-w-full h-full ${banner.imageUrl ? 'bg-gray-900' : `bg-gradient-to-br ${banner.gradient}`} relative flex items-center overflow-hidden`}
           >
-            {/* Background decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+            {/* Background Image - nếu có imageUrl */}
+            {banner.imageUrl && (
+              <div className="absolute inset-0">
+                <Image
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  fill
+                  className="object-cover opacity-70"
+                  priority={banner.order === 0}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/20 to-transparent"></div>
+              </div>
+            )}
+
+            {/* Background decorations - chỉ hiển thị khi dùng gradient */}
+            {!banner.imageUrl && (
+              <>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+              </>
+            )}
 
             {/* Content */}
             <div className="container-custom relative z-10">

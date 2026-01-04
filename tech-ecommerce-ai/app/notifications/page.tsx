@@ -30,6 +30,9 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [testingNotification, setTestingNotification] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [showDebug, setShowDebug] = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -62,8 +65,8 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      const response = await fetch('/api/notifications/mark-read', {
-        method: 'POST',
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId: id })
       })
@@ -80,8 +83,10 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'POST'
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllAsRead: true })
       })
 
       if (response.ok) {
@@ -96,7 +101,7 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (id: string) => {
     try {
-      const response = await fetch(`/api/notifications/${id}`, {
+      const response = await fetch(`/api/notifications?id=${id}`, {
         method: 'DELETE'
       })
 
@@ -106,6 +111,53 @@ export default function NotificationsPage() {
       }
     } catch (error) {
       console.error('Error deleting notification:', error)
+      toast.error('Có lỗi xảy ra')
+    }
+  }
+
+  const sendTestNotification = async () => {
+    setTestingNotification(true)
+    try {
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('✅ Thông báo thử nghiệm đã được gửi!')
+        console.log('Test notification result:', data)
+
+        // Reload notifications after a short delay
+        setTimeout(() => {
+          fetchNotifications()
+        }, 1000)
+      } else {
+        toast.error(`❌ Lỗi: ${data.error || 'Không thể gửi thông báo'}`)
+        console.error('Test notification error:', data)
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error)
+      toast.error('❌ Có lỗi xảy ra khi gửi thông báo test')
+    } finally {
+      setTestingNotification(false)
+    }
+  }
+
+  const fetchDebugInfo = async () => {
+    try {
+      const response = await fetch('/api/notifications/debug')
+      const data = await response.json()
+
+      if (response.ok) {
+        setDebugInfo(data)
+        setShowDebug(true)
+        console.log('Debug info:', data)
+      } else {
+        toast.error('Không thể lấy thông tin debug')
+      }
+    } catch (error) {
+      console.error('Error fetching debug info:', error)
       toast.error('Có lỗi xảy ra')
     }
   }
@@ -194,8 +246,86 @@ export default function NotificationsPage() {
                   {unreadCount > 0 ? `Bạn có ${unreadCount} thông báo chưa đọc` : 'Bạn đã đọc tất cả thông báo'}
                 </p>
               </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={sendTestNotification}
+                  disabled={testingNotification}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {testingNotification ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      🧪 Test Thông Báo
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={fetchDebugInfo}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                  🔍 Debug Info
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Debug Info Panel */}
+          {showDebug && debugInfo && (
+            <div className="mb-6 bg-gray-900 text-gray-100 rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">🔍 Debug Information</h3>
+                <button
+                  onClick={() => setShowDebug(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 text-sm font-mono">
+                <div>
+                  <div className="text-yellow-400 font-bold mb-2">SSE Connection:</div>
+                  <div className="pl-4 space-y-1">
+                    <div>Active: <span className={debugInfo.sseConnection.hasActiveConnection ? 'text-green-400' : 'text-red-400'}>
+                      {debugInfo.sseConnection.currentUserConnected}
+                    </span></div>
+                    <div>Total Connections: <span className="text-blue-400">{debugInfo.sseConnection.totalActiveConnections}</span></div>
+                    <div>Active Users: <span className="text-blue-400">[{debugInfo.sseConnection.allActiveUserIds.join(', ')}]</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-yellow-400 font-bold mb-2">Notifications:</div>
+                  <div className="pl-4 space-y-1">
+                    <div>Total: <span className="text-blue-400">{debugInfo.notifications.total}</span></div>
+                    <div>Unread: <span className="text-blue-400">{debugInfo.notifications.unread}</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-yellow-400 font-bold mb-2">User Info:</div>
+                  <div className="pl-4 space-y-1">
+                    <div>ID: <span className="text-blue-400">{debugInfo.currentUser.id}</span></div>
+                    <div>Email: <span className="text-blue-400">{debugInfo.currentUser.email}</span></div>
+                    <div>Role: <span className="text-blue-400">{debugInfo.currentUser.role}</span></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-yellow-400 font-bold mb-2">Troubleshooting:</div>
+                  <div className="pl-4 space-y-1">
+                    {debugInfo.troubleshooting.steps.map((step: string, index: number) => (
+                      <div key={index}>{step}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Filters */}
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">

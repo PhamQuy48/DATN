@@ -44,7 +44,7 @@ export default function LoginScreen({ navigation }: any) {
           <View style={styles.logo}>
             <Text style={styles.logoText}>QM</Text>
           </View>
-          <Text style={styles.title}>SHOP QM</Text>
+          <Text style={styles.title}>Thế Giới Công Nghệ</Text>
           <Text style={styles.subtitle}>Công nghệ hàng đầu</Text>
         </View>
 

@@ -689,7 +689,7 @@ export default function AdminProductsPage() {
               {/* Image Upload */}
               <ImageUpload
                 images={newProduct.images ? (Array.isArray(newProduct.images) ? newProduct.images : []) : []}
-                onImagesChange={(images) => setNewProduct({ ...newProduct, images: images.length > 0 ? images : null })}
+                onImagesChange={(images) => setNewProduct({ ...newProduct, images: images.length > 0 ? JSON.stringify(images) : null })}
                 maxImages={5}
               />
             </div>
@@ -886,7 +886,7 @@ export default function AdminProductsPage() {
               {/* Image Upload */}
               <ImageUpload
                 images={editingProduct.images ? (Array.isArray(editingProduct.images) ? editingProduct.images : []) : []}
-                onImagesChange={(images) => setEditingProduct({ ...editingProduct, images: images.length > 0 ? images : null })}
+                onImagesChange={(images) => setEditingProduct({ ...editingProduct, images: images.length > 0 ? JSON.stringify(images) : null })}
                 maxImages={5}
               />
             </div>

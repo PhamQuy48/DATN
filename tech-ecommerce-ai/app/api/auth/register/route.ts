@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { sendEmail } from '@/lib/email/nodemailer'
+import { generateVerificationEmail } from '@/lib/email/templates/verification'
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,13 +40,18 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+
+    // Create user with verification token
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: 'CUSTOMER',
+        verificationToken,
       },
       select: {
         id: true,
@@ -53,6 +61,34 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    console.log('[Register] ✅ User created:', email)
+
+    // Send verification email
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken}`
+
+    const emailHtml = generateVerificationEmail({
+      name,
+      verificationUrl,
+      verificationCode,
+    })
+
+    try {
+      const result = await sendEmail({
+        to: email,
+        subject: '✉️ Xác thực email - ShopQM',
+        html: emailHtml,
+      })
+
+      if (result.success) {
+        console.log('[Register] ✅ Verification email sent to:', email)
+      } else {
+        console.error('[Register] ❌ Failed to send verification email:', result.error)
+      }
+    } catch (emailError) {
+      console.error('[Register] ❌ Error sending verification email:', emailError)
+      // Don't fail registration if email fails - user can resend later
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -60,6 +96,8 @@ export async function POST(req: NextRequest) {
           ...user,
           role: user.role.toLowerCase(), // Convert CUSTOMER to user for mobile app
         },
+        message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+        emailSent: true,
       },
       { status: 201 }
     )
